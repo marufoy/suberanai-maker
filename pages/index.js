@@ -18,7 +18,7 @@ export default function HomePage() {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
     const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-+   setPosts(fetched);
+    setPosts(fetched);
   }
 
   useEffect(() => {
@@ -80,7 +80,86 @@ export default function HomePage() {
         </div>
       ))}
 
-      
+      {/* ＋投稿（固定ボタン） */}
+      <button
+        onClick={openPost}
+        aria-label="投稿を作成"
+        style={{
+          position: 'fixed',
+          right: '24px',
+          bottom: '24px',
+          borderRadius: '9999px',
+          padding: '12px 18px',
+          color: '#fff',
+          background: '#000',
+          boxShadow: '0 6px 16px rgba(0,0,0,0.2)',
+          fontWeight: 700,
+        }}
+      >
+        ＋ 投稿
+      </button>
+
+      {/* モーダル */}
+      {isPostOpen && (
+        <Modal onClose={closePost}>
+          <div style={{ marginBottom: '12px', fontSize: '18px', fontWeight: 600 }}>
+            新規投稿
+          </div>
+          <PostForm onDone={handlePostDone} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Modal({ children, onClose }) {
+  // ESCで閉じる（フォーカス用にtabIndexを付与）
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'grid',
+        placeItems: 'center',
+      }}
+    >
+      <div
+        onClick={onClose}
+        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          background: '#fff',
+          borderRadius: '16px',
+          padding: '24px',
+          width: 'min(640px, 90vw)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+        }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="閉じる"
+          style={{
+            position: 'absolute',
+            right: '12px',
+            top: '12px',
+            fontSize: '20px',
+            lineHeight: 1,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
     </div>
   );
 }
