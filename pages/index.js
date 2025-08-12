@@ -1,16 +1,33 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import PostForm from '../components/PostForm'
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, updateDoc, increment, query, orderBy } from 'firebase/firestore';
 export default function HomePage() {
+  const router = useRouter();
+  const isPostOpen = router.query.post === "new";
   const [posts, setPosts] = useState([]);
+
+  // モーダル開閉（シャロー遷移）
+  const openPost = () => router.push('/?post=new', undefined, { shallow: true });
+  const closePost = () => router.push('/', undefined, { shallow: true });
+
+  // 投稿完了：モーダルを閉じてから一覧を再取得
+  const handlePostDone = async () => {
+    closePost();
+    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
++   setPosts(fetched);
+  }
 
   useEffect(() => {
     const fetchPosts = async () => {
       const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      const fetchedPosts = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
+      const fetchedPosts = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
       }));
       setPosts(fetchedPosts);
     };
@@ -62,6 +79,8 @@ export default function HomePage() {
           <button onClick={() => handleVote(post.id, 'notFunny')}>💤</button>
         </div>
       ))}
+
+      
     </div>
   );
 }
