@@ -3,9 +3,8 @@ import { useRouter } from "next/router";
 import PostForm from "../components/PostForm";
 
 import { db } from "../lib/firebase";
-import {
-  collection, getDocs, doc, updateDoc, increment, query, orderBy
-} from "firebase/firestore";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { toggleVoteClient, getVoteCount } from "../lib/vote-client";
 
 export default function HomePage() {
   const router = useRouter();
@@ -38,13 +37,18 @@ export default function HomePage() {
   };
 
   // 投票
-  const handleVote = async (postId, field) => {
-    const postRef = doc(db, "posts", postId);
+  const handleVote = async (postId, field /* "funny" | "notFunny" */) => {
     try {
-      await updateDoc(postRef, { [field]: increment(1) });
-      setPosts((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, [field]: (p[field] || 0) + 1 } : p))
+      const { delta } = await toggleVoteClient(postId, field);
+      // 楽観更新（0未満ガード）
+      setPosts(prev =>
+        prev.map(p =>
+          p.id === postId ? { ...p, [field]: Math.max(0, (p[field] || 0) + delta) } : p
+        )
       );
+      // 必要あれば正確な件数で再同期
+      // const fresh = await getVoteCount(postId, field);
+      // setPosts(prev => prev.map(p => p.id === postId ? { ...p, [field]: fresh } : p));
     } catch (err) {
       console.error("投票失敗:", err);
     }
@@ -86,7 +90,7 @@ export default function HomePage() {
       )}
 
       {/* ▼ スタイル（色は前と揃えてます） */}
-     <style jsx>{`
+      <style jsx>{`
   .page {
     --pink: #ff4da6;
     --purple: #7b61ff;
