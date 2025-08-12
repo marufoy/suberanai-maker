@@ -1,7 +1,8 @@
 // pages/_app.js
+import 'modern-css-reset'; // ← リセットCSSを読み込み
+import '../styles/globals.css';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import Script from 'next/script';
-import '../styles/globals.css';
 
 export default function App({ Component, pageProps }) {
   return (

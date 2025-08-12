@@ -87,7 +87,7 @@ export default function HomePage() {
         style={{
           position: 'fixed',
           right: '24px',
-          bottom: '24px',
+          bottom: '96px',
           borderRadius: '9999px',
           padding: '12px 18px',
           color: '#fff',
