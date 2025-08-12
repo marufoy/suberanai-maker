@@ -4,12 +4,13 @@ import PostForm from "../components/PostForm";
 
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { toggleVoteClient, getVoteCount } from "../lib/vote-client";
+import { getMyVote, toggleExclusive } from "../lib/vote-client";
 
 export default function HomePage() {
   const router = useRouter();
   const isPostOpen = router.query.post === "new";
   const [posts, setPosts] = useState([]);
+  const [myVotes, setMyVotes] = useState({}); // { [postId]: "funny" | "notFunny" | null }
 
   // 開く/閉じる（URLだけ変える）
   const openPost = () => router.push("/?post=new", undefined, { shallow: true });
@@ -21,6 +22,12 @@ export default function HomePage() {
     const snapshot = await getDocs(q);
     const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     setPosts(fetched);
+    // 自分の投票状態をまとめて取得（簡単版：逐次）
+    const states = {};
+    for (const p of fetched) {
+      states[p.id] = await getMyVote(p.id);
+    }
+    setMyVotes(states);
   }, []);
 
   useEffect(() => { fetchPosts(); }, [fetchPosts]);
@@ -39,16 +46,17 @@ export default function HomePage() {
   // 投票
   const handleVote = async (postId, field /* "funny" | "notFunny" */) => {
     try {
-      const { delta } = await toggleVoteClient(postId, field);
-      // 楽観更新（0未満ガード）
+      const { state, delta } = await toggleExclusive(postId, field);
+      // カウントの楽観更新（両方に影響する可能性があるので2フィールド反映）
       setPosts(prev =>
-        prev.map(p =>
-          p.id === postId ? { ...p, [field]: Math.max(0, (p[field] || 0) + delta) } : p
-        )
+        prev.map(p => p.id !== postId ? p : {
+          ...p,
+          funny: Math.max(0, (p.funny || 0) + (delta.funny || 0)),
+          notFunny: Math.max(0, (p.notFunny || 0) + (delta.notFunny || 0)),
+        })
       );
-      // 必要あれば正確な件数で再同期
-      // const fresh = await getVoteCount(postId, field);
-      // setPosts(prev => prev.map(p => p.id === postId ? { ...p, [field]: fresh } : p));
+      // 自分の投票状態を更新
+      setMyVotes(prev => ({ ...prev, [postId]: state }));
     } catch (err) {
       console.error("投票失敗:", err);
     }
@@ -72,10 +80,16 @@ export default function HomePage() {
           <p className="punch"><strong>オチ：</strong>{post.punchline || "（オチなし）"}</p>
 
           <div className="actionsRow">
-            <button className="pill pink" onClick={() => handleVote(post.id, "funny")}>
+            <button
+              className={`pill pink ${myVotes[post.id] === "funny" ? "active" : ""}`}
+              onClick={() => handleVote(post.id, "funny")}
+            >
               <span className="icon">♡</span> 面白い <span className="count">{post.funny || 0}</span>
             </button>
-            <button className="pill orange" onClick={() => handleVote(post.id, "notFunny")}>
+            <button
+              className={`pill orange ${myVotes[post.id] === "notFunny" ? "active" : ""}`}
+              onClick={() => handleVote(post.id, "notFunny")}
+            >
               <span className="icon">⚡</span> イマイチ <span className="count">{post.notFunny || 0}</span>
             </button>
           </div>
@@ -193,6 +207,11 @@ export default function HomePage() {
   .pill:active{ transform: scale(0.97); }
   .pill.pink:hover{   background: #ffeaf3; }
   .pill.orange:hover{ background: #fff2e5; }
+  .pill.active{
+  background: currentColor;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(0,0,0,.12) inset, 0 4px 10px rgba(0,0,0,.08);
+}
   .pill:focus-visible{ outline: 3px solid rgba(123,97,255,.35); outline-offset: 2px; }
 
   @media (max-width: 560px) {
