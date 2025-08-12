@@ -1,0 +1,13 @@
+// pages/api/verify-recaptcha.js
+export default async function handler(req, res) {
+  const { token } = req.body;
+
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+
+  const verifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
+
+  const response = await fetch(verifyURL, { method: 'POST' });
+  const data = await response.json();
+
+  res.status(200).json(data);
+}
