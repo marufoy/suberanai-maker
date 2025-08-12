@@ -37,28 +37,55 @@ export default function PostForm({ onDone }) {
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="grid gap-3">
+ return (
+    <form onSubmit={handleSubmit} className="form">
       <input
+        className="input"
         value={title}
         onChange={(e)=>setTitle(e.target.value)}
         placeholder="タイトル（任意）"
-        className="border rounded px-3 py-2"
       />
       <textarea
+        className="textarea"
         value={body}
         onChange={(e)=>setBody(e.target.value)}
         placeholder="本文"
         rows={6}
-        className="border rounded px-3 py-2"
       />
-      <button
-        type="submit"
-        disabled={loading}
-        className="rounded bg-black text-white px-4 py-2 disabled:opacity-60"
-      >
-        {loading ? "投稿中..." : "投稿する"}
-      </button>
+      <div className="actions">
+        <button type="submit" disabled={loading} className="submit">
+          {loading ? "投稿中..." : "投稿する"}
+        </button>
+      </div>
+
+      <style jsx>{`
+        .form { display: grid; gap: 14px; }
+        .input, .textarea {
+          width: 100%;
+          border: 1px solid #cfd4dc;
+          border-radius: 10px;
+          padding: 10px 12px;
+          background: #fff;
+          outline: none;
+        }
+        .input::placeholder, .textarea::placeholder { color: #9aa3ad; }
+        .textarea { min-height: 180px; resize: vertical; }
+        .input:focus, .textarea:focus {
+          border-color: #4c82f7;
+          box-shadow: 0 0 0 3px rgba(76,130,247,0.2);
+        }
+        .actions { display: flex; justify-content: flex-end; margin-top: 6px; }
+        .submit {
+          border: none;
+          border-radius: 10px;
+          padding: 10px 16px;
+          font-weight: 700;
+          background: #111;
+          color: #fff;
+          cursor: pointer;
+        }
+        .submit[disabled] { opacity: .6; cursor: not-allowed; }
+      `}</style>
     </form>
   );
 }

@@ -113,53 +113,69 @@ export default function HomePage() {
 }
 
 function Modal({ children, onClose }) {
-  // ESCで閉じる（フォーカス用にtabIndexを付与）
   return (
     <div
+      className="modal"
       role="dialog"
       aria-modal="true"
       tabIndex={-1}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 50,
-        display: 'grid',
-        placeItems: 'center',
-      }}
     >
-      <div
-        onClick={onClose}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }}
-      />
-      <div
-        style={{
-          position: 'relative',
-          background: '#fff',
-          borderRadius: '16px',
-          padding: '24px',
-          width: 'min(640px, 90vw)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-        }}
-      >
-        <button
-          onClick={onClose}
-          aria-label="閉じる"
-          style={{
-            position: 'absolute',
-            right: '12px',
-            top: '12px',
-            fontSize: '20px',
-            lineHeight: 1,
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          ×
-        </button>
+      <div className="backdrop" onClick={onClose} />
+      <div className="panel">
+        <button className="close" onClick={onClose} aria-label="閉じる">×</button>
         {children}
       </div>
+
+      <style jsx>{`
+        .modal {
+          position: fixed;
+          inset: 0;
+          z-index: 999;
+          display: grid;
+          place-items: center;
+        }
+        .backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(0,0,0,0.42);
+          backdrop-filter: blur(1px);
+        }
+        .panel {
+          position: relative;
+          width: min(720px, 92vw);
+          background: #fff;
+          border-radius: 16px;
+          padding: 24px;
+          box-shadow:
+            0 10px 20px rgba(0,0,0,0.15),
+            0 2px 6px rgba(0,0,0,0.08);
+        }
+        /* 局所リセット & タイポ */
+        .panel, .panel * {
+          box-sizing: border-box;
+          font: inherit;
+          color: #222;
+        }
+        .panel :global(h1), .panel :global(h2), .panel :global(h3) { margin: 0 0 12px; line-height: 1.3; }
+        .close {
+          position: absolute;
+          right: 12px;
+          top: 10px;
+          font-size: 22px;
+          line-height: 1;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          opacity: .6;
+        }
+        .close:hover { opacity: 1; }
+
+        @media (max-width: 480px) {
+          .panel { padding: 18px; width: min(640px, 94vw); }
+          .close { right: 8px; top: 8px; }
+        }
+      `}</style>
     </div>
   );
 }
