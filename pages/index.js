@@ -1,19 +1,43 @@
+// pages/index.jsx
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import PostForm from "../components/PostForm";
 
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
-import { getMyVote, toggleExclusiveFast, getVoteCount } from "../lib/vote-client";
+import {
+  getMyVote,
+  toggleExclusiveFast,
+  getVoteCount,
+} from "../lib/vote-client";
+import { ensureAnonAuth } from "../lib/auth";
 
 export default function HomePage() {
   const router = useRouter();
   const isPostOpen = router.query.post === "new";
+
   const [posts, setPosts] = useState([]);
   const [myVotes, setMyVotes] = useState({}); // { [postId]: "funny" | "notFunny" | null }
+  const [authReady, setAuthReady] = useState(false);
 
-  const openPost = () => router.push("/?post=new", undefined, { shallow: true });
+  const openPost = () =>
+    router.push("/?post=new", undefined, { shallow: true });
   const closePost = () => router.push("/", undefined, { shallow: true });
+
+  // 起動時に匿名ログインを完了させておく（ボタン有効化の合図にも使う）
+  useEffect(() => {
+    let alive = true;
+    ensureAnonAuth()
+      .then(() => {
+        if (alive) setAuthReady(true);
+      })
+      .catch(() => {
+        if (alive) setAuthReady(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // 一覧＋合計カウント＋自分の投票状態をまとめて取得
   const fetchPosts = useCallback(async () => {
@@ -21,10 +45,10 @@ export default function HomePage() {
     const snapshot = await getDocs(q);
     const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-    // 初期は全て null で埋めて“選択済みに見える”チラつきを防止
+    // 初期は null で埋めて「最初から選択されて見える」チラつきを防止
     setMyVotes(Object.fromEntries(fetched.map((p) => [p.id, null])));
 
-    // ★ 各投稿の votes を count() で集計（他ユーザー分も含む）
+    // 各投稿の votes を count() で集計
     const counts = await Promise.all(
       fetched.map(async (p) => {
         const [f, n] = await Promise.all([
@@ -43,7 +67,7 @@ export default function HomePage() {
       }))
     );
 
-    // 自分の投票状態を並列取得
+    // 自分の投票状態
     const statesArr = await Promise.all(fetched.map((p) => getMyVote(p.id)));
     setMyVotes(Object.fromEntries(fetched.map((p, i) => [p.id, statesArr[i]])));
   }, []);
@@ -52,7 +76,7 @@ export default function HomePage() {
     fetchPosts();
   }, [fetchPosts]);
 
-  // モーダル中の背景スクロールを止める
+  // モーダル中の背景スクロール停止
   useEffect(() => {
     document.body.style.overflow = isPostOpen ? "hidden" : "";
   }, [isPostOpen]);
@@ -65,8 +89,11 @@ export default function HomePage() {
 
   // 投票（順次 delete→set、UIは即時反映＋楽観更新）
   const handleVote = async (postId, field) => {
+    // 念のためここでも認証完了を待つ
+    await ensureAnonAuth();
+
     const current = myVotes[postId] ?? null;
-    // UI先行
+    // 楽観的に UI を先行更新
     setMyVotes((prev) => ({ ...prev, [postId]: current === field ? null : field }));
 
     try {
@@ -78,16 +105,16 @@ export default function HomePage() {
           p.id !== postId
             ? p
             : {
-              ...p,
-              funny: Math.max(0, (p.funny || 0) + (delta.funny || 0)),
-              notFunny: Math.max(0, (p.notFunny || 0) + (delta.notFunny || 0)),
-            }
+                ...p,
+                funny: Math.max(0, (p.funny || 0) + (delta.funny || 0)),
+                notFunny: Math.max(0, (p.notFunny || 0) + (delta.notFunny || 0)),
+              }
         )
       );
 
       setMyVotes((prev) => ({ ...prev, [postId]: state }));
 
-      // （任意の厳密補正）押下後に最新カウントで補正したい場合は有効化
+      // 厳密補正を入れたい場合は下記を有効化（任意）
       // setTimeout(async () => {
       //   try {
       //     const [f, n] = await Promise.all([
@@ -101,8 +128,9 @@ export default function HomePage() {
       // }, 700);
     } catch (err) {
       console.error("投票失敗:", err);
-      // ロールバック
+      // 失敗時はロールバック
       setMyVotes((prev) => ({ ...prev, [postId]: current }));
+      alert("読み込み直後は少し待ってからもう一度お試しください。");
     }
   };
 
@@ -130,6 +158,8 @@ export default function HomePage() {
             <button
               className={`pill pink ${myVotes[post.id] === "funny" ? "active" : ""}`}
               onClick={() => handleVote(post.id, "funny")}
+              disabled={!authReady}
+              aria-disabled={!authReady}
             >
               <span className="icon">♡</span> 面白い{" "}
               <span className="count">{post.funny ?? 0}</span>
@@ -137,6 +167,8 @@ export default function HomePage() {
             <button
               className={`pill orange ${myVotes[post.id] === "notFunny" ? "active" : ""}`}
               onClick={() => handleVote(post.id, "notFunny")}
+              disabled={!authReady}
+              aria-disabled={!authReady}
             >
               <span className="icon">⚡</span> イマイチ{" "}
               <span className="count">{post.notFunny ?? 0}</span>
@@ -356,23 +388,25 @@ export default function HomePage() {
           box-shadow: inset 0 8px 22px rgba(0, 0, 0, 0.12),
             0 6px 18px rgba(0, 0, 0, 0.12);
         }
+
+        /* モバイル最適化 */
         @media (max-width: 480px) {
-    .header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    .headerBtn {
-      font-size: 14px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      background-size: 200% 100%;
-    }
-    .brand {
-      font-size: 24px;
-      line-height: 1.2;
-    }
-  }
+          .header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+          .headerBtn {
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-size: 200% 100%;
+          }
+          .brand {
+            font-size: 24px;
+            line-height: 1.2;
+          }
+        }
       `}</style>
     </div>
   );

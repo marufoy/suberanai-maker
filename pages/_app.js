@@ -1,19 +1,14 @@
-// pages/_app.js
-import 'modern-css-reset'; // ← リセットCSSを読み込み
-import '../styles/globals.css';
-import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
-import { useEffect } from 'react';
-import Script from 'next/script';
-import { ensureAppCheck } from '../lib/firebase';
+// pages/_app.js（抜粋）
+import { useEffect } from "react";
+import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
+import { ensureAppCheck } from "../lib/firebase";
+import { ensureAnonAuth } from "../lib/auth";
 
 export default function App({ Component, pageProps }) {
-
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      ensureAppCheck();
-    }
+    ensureAppCheck();
+    ensureAnonAuth().catch(() => {/* noop */});
   }, []);
-
 
   return (
     <GoogleReCaptchaProvider
