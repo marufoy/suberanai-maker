@@ -21,7 +21,6 @@ export default async function handler(req, res) {
     );
 
     const result = await response_recaptcha.json();
-    console.log("reCAPTCHA応答:", result);
 
     // チェック
     if (!result.success || result.score < 0.5) {

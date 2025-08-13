@@ -78,10 +78,10 @@ export default function HomePage() {
           p.id !== postId
             ? p
             : {
-                ...p,
-                funny: Math.max(0, (p.funny || 0) + (delta.funny || 0)),
-                notFunny: Math.max(0, (p.notFunny || 0) + (delta.notFunny || 0)),
-              }
+              ...p,
+              funny: Math.max(0, (p.funny || 0) + (delta.funny || 0)),
+              notFunny: Math.max(0, (p.notFunny || 0) + (delta.notFunny || 0)),
+            }
         )
       );
 
@@ -110,7 +110,7 @@ export default function HomePage() {
     <div className="page">
       {/* ▼ ヘッダー */}
       <header className="header">
-        <h1 className="brand">すべらない話一覧</h1>
+        <h1 className="brand">AIがムチャクチャなオチをつけてくれる掲示板</h1>
         <button className="headerBtn" onClick={openPost} aria-label="新しい話を投稿">
           <span className="plus">＋</span> 新しい話を投稿
         </button>
@@ -356,6 +356,23 @@ export default function HomePage() {
           box-shadow: inset 0 8px 22px rgba(0, 0, 0, 0.12),
             0 6px 18px rgba(0, 0, 0, 0.12);
         }
+        @media (max-width: 480px) {
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .headerBtn {
+      font-size: 14px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background-size: 200% 100%;
+    }
+    .brand {
+      font-size: 24px;
+      line-height: 1.2;
+    }
+  }
       `}</style>
     </div>
   );

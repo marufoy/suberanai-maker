@@ -22,7 +22,7 @@ export default function PostPage() {
     try {
       // トークン取得
       const token = await executeRecaptcha('submit');
-      console.log("reCAPTCHA token:", token);
+
 
       // サーバーで検証
       const res = await fetch('/api/recaptcha', {
